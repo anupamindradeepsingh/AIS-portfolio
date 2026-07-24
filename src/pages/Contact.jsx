@@ -3,30 +3,12 @@ import PageHeader from "../components/ui/PageHeader";
 import Button from "../components/ui/Button";
 import profile from "../data/profile";
 
-// Production-ready contact form via Web3Forms — plain HTML form POST,
-// no JavaScript fetch involved. The browser submits the form directly to
-// Web3Forms, which emails the message and then redirects the visitor back
-// to this page (a REAL full page reload — not a client-side route change)
-// with a `contact=sent` query flag that we read once on load.
-//
-// REQUIRED SETUP (the form will NOT deliver email until this is done):
-//   1. Go to https://web3forms.com and sign up using the inbox you want
-//      messages delivered to (luckyanu1332005@gmail.com).
-//   2. Copy the access key it gives you.
-//   3. Locally: copy .env.example to .env and set
-//        VITE_WEB3FORMS_ACCESS_KEY=your-access-key-here
-//   4. On Vercel: Project Settings → Environment Variables → add the same
-//      variable + value → redeploy.
-// This key is a public site key by design (like a reCAPTCHA site key), not
-// a secret — Web3Forms is built to be called directly from the browser.
-//const WEB3FORMS_ACCESS_KEY = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || "";
 const WEB3FORMS_ACCESS_KEY = "31caa002-55f5-4924-9319-a84d815dc52d";
 
 export default function Contact() {
-  const [banner, setBanner] = useState(null); // null | "sent" | "error" | "no-key"
+  const [banner, setBanner] = useState(null); // null | "sent" | "error"
+  const [loading, setLoading] = useState(false);
 
-  // Read the redirect flag Web3Forms sends back after a real form submission,
-  // then clean the URL so refreshing again doesn't re-show the banner.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const flag = params.get("contact");
@@ -39,7 +21,33 @@ export default function Contact() {
     }
   }, []);
 
-  const redirectUrl = `${window.location.origin}/contact?contact=sent`;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.target);
+    formData.append("access_key", WEB3FORMS_ACCESS_KEY);
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setBanner("sent");
+        e.target.reset();
+      } else {
+        setBanner("error");
+      }
+    } catch (err) {
+      setBanner("error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -108,15 +116,10 @@ export default function Contact() {
           </div>
 
           <form
-            action="https://api.web3forms.com/submit"
-            method="POST"
+            onSubmit={handleSubmit}
             className="space-y-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-6"
           >
-            {/* Web3Forms config fields — hidden, not shown to the visitor */}
-            <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
             <input type="hidden" name="subject" value="New message from portfolio contact form" />
-            <input type="hidden" name="redirect" value={redirectUrl} />
-            {/* honeypot spam trap — must stay empty, real users never see it */}
             <input type="checkbox" name="botcheck" className="hidden" tabIndex={-1} autoComplete="off" />
 
             <div>
@@ -156,14 +159,13 @@ export default function Contact() {
               />
             </div>
 
-            <Button as="button" type="submit" variant="primary" className="w-full justify-center">
-              Send Message
+            <Button as="button" type="submit" variant="primary" className="w-full justify-center" disabled={loading}>
+              {loading ? "Sending..." : "Send Message"}
             </Button>
 
             {!WEB3FORMS_ACCESS_KEY && (
               <p className="font-mono text-xs text-[var(--color-danger)]">
-                ⚠ Web3Forms access key not configured yet — see .env.example / README.
-                The form will not deliver email until this is set.
+                ⚠ Web3Forms access key not configured yet.
               </p>
             )}
             {banner === "sent" && (
@@ -173,7 +175,7 @@ export default function Contact() {
             )}
             {banner === "error" && (
               <p className="font-mono text-xs text-[var(--color-danger)]">
-                Something went wrong on Web3Forms' end. Please try again or email directly.
+                Something went wrong. Please try again or email directly.
               </p>
             )}
           </form>
