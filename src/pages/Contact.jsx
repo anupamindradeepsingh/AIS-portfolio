@@ -19,7 +19,8 @@ import profile from "../data/profile";
 //      variable + value → redeploy.
 // This key is a public site key by design (like a reCAPTCHA site key), not
 // a secret — Web3Forms is built to be called directly from the browser.
-const WEB3FORMS_ACCESS_KEY = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || "";
+//const WEB3FORMS_ACCESS_KEY = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || "";
+const WEB3FORMS_ACCESS_KEY = "31caa002-55f5-4924-9319-a84d815dc52d";
 
 export default function Contact() {
   const [banner, setBanner] = useState(null); // null | "sent" | "error" | "no-key"
